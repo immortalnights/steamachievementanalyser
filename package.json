@@ -1,0 +1,9 @@
+{
+  "name": "steamachievementanalyser",
+  "version": "1.0.0",
+  "description": "Analyses user Steam achievements.",
+  "dependencies": {
+    "debug": "^2.6.8",
+    "underscore": "^1.8.3"
+  }
+}
