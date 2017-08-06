@@ -164,17 +164,18 @@ const analyze = function(data) {
 			else
 			{
 				recordEasiestGames(game, lowestGlobalPercentage);
-
-				if (0 === gameAchievementsAttained)
-				{
-					++stats.notStarted;
-				}
-				else
-				{
-					var percent = Math.round(game.achievements.length / gameAchievementsAttained);
-					totalPercentage += percent;
-				}
 			}
+
+			if (0 === gameAchievementsAttained)
+			{
+				++stats.notStarted;
+			}
+			else
+			{
+				var percent = (gameAchievementsAttained / game.achievements.length) * 100;
+				totalPercentage += percent;
+			}
+
 
 			if (!gameAnalysis.mostAchievements || gameAnalysis.mostAchievements.achievementCount < game.achievements.length)
 			{
@@ -190,7 +191,10 @@ const analyze = function(data) {
 		}
 	});
 
-	stats.completionPercentage = Math.floor(totalPercentage / (stats.gamesWithAchievements - stats.notStarted));
+	if (totalPercentage !== 0 && ((stats.gamesWithAchievements - stats.notStarted) > 0))
+	{
+		stats.completionPercentage = Math.floor(totalPercentage / (stats.gamesWithAchievements - stats.notStarted));
+	}
 
 	console.log(stats);
 	console.log(gameAnalysis);

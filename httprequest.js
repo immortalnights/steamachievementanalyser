@@ -34,46 +34,46 @@ module.exports = {
 					debug("Request completed");
 
 					// TODO verify response is JSON
-					var responseJSON;
-
-					try
+					const contentType = response.headers['content-type'];
+					if (contentType.startsWith('application/json'))
 					{
-						debug("Parsing response data");
-						responseJSON = JSON.parse(responseData);
-						debug("Parsed response data");
-					}
-					catch (e)
-					{
-						debug("Parse Error!", e);
-						debug(responseData);
-					}
-
-					if (responseJSON)
-					{
-						if (responseJSON[responseDataKey])
+						var responseJSON;
+						try
 						{
-							if ((this.statusCode >= 200 && this.statusCode < 300) || this.statusCode === 301)
+							debug("Parsing response data");
+							responseJSON = JSON.parse(responseData);
+							debug("Parsed response data");
+
+							if (responseJSON[responseDataKey])
 							{
-								debug("Completed successfully");
-								resolve(responseJSON[responseDataKey]);
+								if ((this.statusCode >= 200 && this.statusCode < 300) || this.statusCode === 301)
+								{
+									debug("Completed successfully");
+									resolve(responseJSON[responseDataKey]);
+								}
+								else
+								{
+									debug("Completed with error; error response");
+									reject(responseJSON[responseDataKey]);
+								}
 							}
 							else
 							{
-								debug("Completed with error; error response");
-								reject(responseJSON[responseDataKey]);
+								debug("Completed with error; invalid responseDataKey", _.keys(responseJSON));
+								reject({ error: "Response does not contain object '" + responseDataKey + "'" });
 							}
 						}
-						else
+						catch (e)
 						{
-							debug("Completed with error; invalid responseDataKey", _.keys(responseJSON));
-							reject({ error: "Response does not contain object '" + responseDataKey + "'" });
+							reject(e);
 						}
+						
 					}
 					else
 					{
-						debug("Completed with error; invalid response data");
-						reject({ error: "Invalid or none JSON response" });
+						reject("Invalid response\n" + responseData);
 					}
+
 				});
 
 				response.on('abort', function() {

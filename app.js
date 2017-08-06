@@ -31,7 +31,9 @@ else
 					console.log("Completed");
 				});
 			})
-			.catch(console.error);
+			.catch(function(e) {
+				console.error("Error", e);
+			});
 			break;
 		}
 		case 'retrieve':

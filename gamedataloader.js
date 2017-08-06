@@ -14,6 +14,10 @@ http.baseURL = "api.steampowered.com";
 // FIXME
 var PRIVATE_API_KEY = '<undefined>';
 
+const getGameId = function(game) {
+	return gameId = game.gameName ? game.gameName + ' (' + game.appid + ')' : '(' + game.appid + ')';
+}
+
 const task_GetOwnedGames = function(userId) {
 	debug("Get games owned for", userId);
 	return http.request('IPlayerService/GetOwnedGames/v0001', {
@@ -37,8 +41,7 @@ const task_GetSchemaForGames = function(games) {
 					// debug
 					if (!game.achievements)
 					{
-						var gameId = game.gameName ? game.gameName + ' (' + game.appid + ')' : game.appid;
-						debug("Game", gameId, "has no achievements");
+						debug("Game", getGameId(game), "has no achievements");
 					}
 
 					return !_.isEmpty(game.gameName);
@@ -101,7 +104,7 @@ const task_GetGlobalAchievementPercentagesForGames = function(games) {
 }
 
 const task_GetGlobalAchievementPercentagesForGame = function(game) {
-	debug("Get global achievement percentages for game", game.gameName);
+	debug("Get global achievement percentages for game", getGameId(game));
 
 	return http.request('ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002', {
 		gameid: game.appid
@@ -119,13 +122,13 @@ const task_GetGlobalAchievementPercentagesForGame = function(game) {
 			}
 			else
 			{
-				debug("Failed to find '%s' in global achievements for game %s (%d)", achievement.name, game.gameName, game.appid);
+				debug("Failed to find '%s' in global achievements for game %s", achievement.name, getGameId(game.gameName));
 			}
 		});
 
 		return game;
 	}, function() {
-		debug("Failed to get global achievement percentages for game %s (%d)", game.gameName, game.appid);
+		debug("Failed to get global achievement percentages for game %s", getGameId(game.gameName));
 	});
 }
 
@@ -157,7 +160,7 @@ const task_GetPlayerAchievementsForGames = function(games, userId) {
 }
 
 const task_GetPlayerAchievementsForGame = function(game, userId) {
-	debug("Get user achievements for game", game.gameName);
+	debug("Get user achievements for game", getGameId(game));
 
 	return http.request('ISteamUserStats/GetPlayerAchievements/v0001', {
 		key: PRIVATE_API_KEY,
@@ -192,8 +195,9 @@ const task_GetPlayerAchievementsForGame = function(game, userId) {
 		});
 
 		return game;
-	}, function() {
-		 debug("Failed to get user achievements for game %s (%d)", game.gameName, game.appid);
+	}, function(e) {
+		debug("Failed to get user achievements for game %s", getGameId(game));
+		debug(e);
 	});
 }
 
@@ -216,10 +220,7 @@ module.exports = {
 		return task_GetOwnedGames(userId)
 			.then(task_GetSchemaForGames)
 			.then(task_GetGlobalAchievementPercentagesForGames)
-			.then(_.partial(task_GetPlayerAchievementsForGames, _, userId))
-			.catch(function(e) {
-				debug('caught', e);
-			});
+			.then(_.partial(task_GetPlayerAchievementsForGames, _, userId));
 	}
 };
 
