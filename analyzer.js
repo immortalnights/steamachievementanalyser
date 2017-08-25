@@ -63,7 +63,8 @@ const analyze = function(data) {
 	}
 
 	const recordEasiestGames = function(game, lowestGlobalPercentage) {
-		if (game.appid === 659850) return;
+		if (game.appid === 659850 || game.appid === 363970) return;
+		if (!game.started) return;
 
 		var easiestGames = gameAnalysis.easiestGames
 
@@ -87,7 +88,8 @@ const analyze = function(data) {
 	}
 
 	const recordEasiestAchievements = function(game, achievement) {
-		if (game.appid === 659850) return;
+		if (game.appid === 659850 || game.appid === 363970) return;
+		if (!game.started) return;
 
 		var easiestAchievements = gameAnalysis.easiestAchievements;
 
@@ -112,6 +114,21 @@ const analyze = function(data) {
 	// Total game achievement completion percentage
 	var totalPercentage = 0;
 	stats.totalGames = data.length;
+
+	// Preprocessing
+	_.each(data, function(game) {
+		// Identify if the game has been started - I.E., if there is play time and at least one earned achievement
+		if (game.playtime_forever && _.some(game.achievements, function(achievement) {
+				return achievement.achieved;
+			}))
+		{
+			game.started = true;
+		}
+		else
+		{
+			game.started = false;
+		}
+	});
 
 	_.each(data, function(game) {
 		// Count unplayed (inaccurate for games which existed before Steam recorded play time)
