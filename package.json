@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Analyses user Steam achievements.",
   "dependencies": {
+    "command-line-args": "^4.0.7",
+    "command-line-usage": "^4.0.1",
     "debug": "^2.6.8",
     "underscore": "^1.8.3"
   }
