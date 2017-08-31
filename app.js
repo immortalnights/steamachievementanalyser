@@ -73,6 +73,11 @@ class App
 		return promise;
 	}
 
+	analyzeUser()
+	{
+		
+	}
+
 	refreshUser(privateKey)
 	{
 		var promise = this._player.refresh(privateKey);
@@ -144,13 +149,32 @@ else
 	.then(function() {
 		console.log("next");
 		var promise = null;
-		if (options.apps && options.refresh)
+
+		if (options.refresh)
 		{
-			promise = app.refreshDataStore(options.privateKey, options.apps);
+			if (options.apps)
+			{
+				promise = app.refreshDataStore(options.privateKey, options.apps);
+			}
+			else if (options.user)
+			{
+				promise = app.refreshUser(options.privateKey);
+			}
+			else
+			{
+				console.error("Must provide user or apps to refresh");
+			}
 		}
-		else
+		else if (options.analyze)
 		{
-			promise = app.refreshUser(options.privateKey);
+			if (options.user)
+			{
+				app.analyzeUser();
+			}
+			else
+			{
+				console.error("Must provide user to analyze");
+			}
 		}
 
 		return promise;
