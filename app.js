@@ -2,8 +2,6 @@ const cmdLineArgs = require('./lib/cmdlineargs');
 const Player = require('./lib/player');
 const DataStore = require('./lib/datastore');
 const Analyzer = require('./lib/analyzer');
-const Steam = require('./lib/steam');
-// const moment = require('moment');
 const _ = require('underscore');
 
 const cmdLine = cmdLineArgs('title', 'description', [
@@ -143,36 +141,6 @@ class App
 	}
 }
 
-var task_GetPlayerAchievementsForGames = function(user, games) {
-	console.log("Get user achievements for %i game(s)...", games.length);
-
-	var self = this;
-	return new Promise(function(resolve, reject) {
-		var failures = 0;
-		var check = _.after(games.length, function() {
-			// reject parent promise if all requests failed
-			if (games.length === failures)
-			{
-				reject();
-			}
-			else
-			{
-				resolve(games);
-			}
-		});
-
-		// Some requests may fail if the game no longer exists or has no associated data
-		// if the game does not have achievements it should be marked so that it's not requested again
-		var requests = _.map(games, function(game) {
-			return self.getPlayerAchievementsForGame(user, game)
-			.then(check)
-			.catch(function(err) {
-				++failures;
-				check();
-			});
-		});
-	});
-}
 
 // console.log("Options", options);
 
@@ -193,50 +161,11 @@ else
 
 		if (options.key)
 		{
-			var steam = new Steam(options.key);
-			
-			console.log("Retrieving owned games...");
-			steam.getOwnedGames(user.id)
-			.then(function(ownedGames) {
-				// fetch any / all games which the user has, which the data store does not have
-				// TODO fetch any games which are over 1 month old
-				// Identify new games for statistical purposes
-				// TODO determine how long ago the data was refreshed and remember the game count change
-				var newGames = _.filter(ownedGames, function(game) { return !_.has(user.data, game.appid); });
-				console.log("Identified", newGames.length, "new games.");
-
-				// Add all new games to the user data
-				_.each(newGames, function(game) {
-					user.data[game.appid] = _.omit(game, 'appid');
-				});
-
-				// If the user has played them, get their achievement information
-				var requiredGames = _.filter(newGames, function(game) { return game.playtime_forever !== 0; });
-
-				var promise;
-				if (!_.isEmpty(requiredGames))
-				{
-					promise = task_GetPlayerAchievementsForGames.call(steam, user.id, requiredGames)
-					.then(function(game) {
-						_.each(games, function(game) {
-							// update the game data
-							_.extend(user.data[game.appid], _.omit(game, 'appid'));
-						});
-
-						console.log("Saving updated user data...");
-						return user.save().catch(function(err) {
-							console.error("Failed to save updated user data!", err)
-						});
-					})
-					.catch(function(err) {
-						console.error("Failed to retrieve any game achievement data");
-					});
-				}
-
-				return promise;
-			})
+			user.update(options.key)
 			.then(function() {
-				console.log("")
+				// Fetch game schema and global achievement percentages for all games the user has
+				console.log("TODO");
+
 			})
 			.catch(function(err) {
 				console.log("Failed to get user games.");
