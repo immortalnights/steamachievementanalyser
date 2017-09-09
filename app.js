@@ -1,65 +1,132 @@
-const loader = require('./gamedataloader');
-const analyzer = require('./analyzer');
+const cmdLineArgs = require('./lib/cmdlineargs');
+const Player = require('./lib/player');
+const DataStore = require('./lib/datastore');
+const Analyzer = require('./lib/analyzer');
+const _ = require('underscore');
 
-var args = process.argv.splice(2);
+const cmdLine = cmdLineArgs('title', 'description', [
+	{
+		name: 'user',
+		alias: 'u',
+		typeLabel: 'arg',
+		description: 'User ID',
+		defaultOption: true
+	},
+	{
+		name: 'key',
+		typeLabel: 'arg',
+		description: 'Steam private API key'
+	},
+	{
+		name: 'refresh',
+		description: '',
+		type: Boolean
+	},
+	{
+		name: 'help',
+		alias: 'h',
+		description: 'Print this usage guide.'
+	}
+]);
 
-if (args.length < 2 || args.length > 3)
+const options = cmdLine.parse();
+
+// console.log("Options", options);
+
+if (options.help || !options.user)
 {
-	console.error("Usage [task] <Steam API Key> <User Id>");
+	console.log(cmdLine.usage());
 }
 else
 {
-	if (args.length === 2)
-	{
-		args.unshift('retrieveAndAnalyze');
-	}
+	// Always have to load the initialize store
+	let games = new DataStore('games.json');
+	let user = new Player(options.user);
 
-	const task = args[0];
-	const apiKey = args[1];
-	const userId = args[2];
+	Promise.all([games.load(), user.load()])
+	.then(function(results, b) {
+		let games = results[0];
+		let user = results[1];
 
-	switch (task)
-	{
-		case 'retrieveAndAnalyze':
+		if (options.key)
 		{
-			console.log("Retrieving user game data");
-			loader.retrieveAndCache(apiKey, userId)
-			.then(function(data) {
-				console.log("Analyzing game data");
-				analyzer.analyze(data)
+			user.update(options.key)
+			.then(function() {
+				// Fetch game schema and global achievement percentages for all games the user has
+				var requiredGames = [];
+
+				_.each(user.data, function(game, key) {
+					if (!_.has(games.data, key))
+					{
+						// add the game to the game data as the game name is more reliable from the user data
+						games.data[key] = {
+							gameName: game.name
+						};
+
+						requiredGames.push({
+							appid: key
+						});
+					}
+					else if (_.isUndefined(games.data[key].achievements))
+					{
+						console.log("need", key, games.data[key]);
+						process.exit();
+						requiredGames.push({
+							appid: key
+						});
+					}
+				});
+
+				return games.getSchemaForGames(options.key, requiredGames)
 				.then(function() {
-					console.log("Completed");
+					return games.getGlobalAchievementsForGames(options.key, requiredGames);
+				})
+				.then(function() {
+					return games.save()
+				})
+				.catch(function(err) {
+					console.error("Failed to update game store");
+					console.error(err);
 				});
 			})
-			.catch(function(e) {
-				console.error("Error", e);
+			.catch(function(err) {
+				console.error("Failed to update data.");
+				console.error(err);
 			});
-			break;
 		}
-		case 'retrieve':
+		else
 		{
-			console.log("Retrieving user game data");
-			loader.retrieveAndCache(apiKey, userId)
-			.then(function() {
-				console.log("Completed");
-			})
-			.catch(console.error);
-			break;
+			_.defer(function() {
+				var analyzer = new Analyzer(user, games);
+				// Display the user summary
+				console.log("Statistics:");
+				_.each(analyzer.statistics, function(value, key) {
+					console.log(value, key);
+				});
+				console.log("");
+				// Display the ten easiest games
+				console.log("Easiest Games:");
+				var easiestGames = analyzer.getEasiestGames();
+				_.each(easiestGames, function(item) {
+					console.log(" - %s (%i): %s%%", item.name, item.id, item.globalCompletionPercentage.toFixed(2));
+				});
+				console.log("");
+				// Display the ten easiest achievements
+				console.log("Easiest Achievements:");
+				var easiestAchievements = analyzer.getEasiestAchievements(false);
+				// console.log(easiestAchievements);
+				_.each(easiestAchievements, function(group, key) {
+					console.log(" - %s (%i)", group[0].gameName, group[0].id);
+					_.each(group, function(item) {
+						console.log("   %s (%s%%)", item.name, item.globalCompletionPercentage.toFixed(2));
+					});
+				});
+				console.log("");
+			});
 		}
-		case 'analyze':
-		{
-			console.log("Analyzing cached game data");
-			analyzer.analyzeFromCache(userId)
-			.then(function() {
-				console.log("Completed");
-			})
-			.catch(console.error);
-			break;
-		}
-		default:
-		{
-			console.error("Invalid task available 'retrieveAndAnalyze', 'retrieve', 'analyze'");
-			break;
-		}
-	}
+	})
+	.catch(function(err) {
+		console.error("Failed to initialize game store or user");
+		console.error(err);
+	});
 }

@@ -2,131 +2,129 @@ const http = require('http');
 const debug = require('debug')('http');
 const query = require('querystring');
 const _ = require('underscore');
+const Deferred = require('./lib/deferred');
 
-// Export the promise enabled request function only
-module.exports = {
-	baseURL: null,
+const request = function(options, responseDataKey) {
+	debug("HTTP", options);
+	return new Promise(function(resolve, reject) {
+		var responseData = '';
+		var req = http.request(options, function(response) {
 
-	/**
-	 *
-	 * @param path URL path
-	 * @param data or query string
-	 * @param responseDataKey unwrap top level response objects
-	 * @return {Promise}
-	 */
-	request: function(path, data, responseDataKey) {
-		debug("HTTP ", path);
-		var options = {
-			host: this.baseURL,
-			path: '/' + path + '?' + query.stringify(data),
-			data: query.stringify(data)
-		};
+			response.on('data', function(chunk) {
+				responseData += chunk;
+			});
 
-		return new Promise(function(resolve, reject) {
-			var responseData = '';
-			var req = http.request(options, function(response) {
+			response.on('end', function() {
+				debug("Request completed");
 
-				response.on('data', function(chunk) {
-					responseData += chunk;
-				});
-
-				response.on('end', function() {
-					debug("Request completed");
-
-					// TODO verify response is JSON
-					const contentType = response.headers['content-type'];
-					if (contentType.startsWith('application/json'))
+				// TODO verify response is JSON
+				const contentType = response.headers['content-type'] || '';
+				if (contentType.startsWith('application/json'))
+				{
+					var responseJSON;
+					try
 					{
-						var responseJSON;
-						try
-						{
-							debug("Parsing response data");
-							responseJSON = JSON.parse(responseData);
-							debug("Parsed response data");
+						debug("Parsing response data");
+						responseJSON = JSON.parse(responseData);
+						debug("Parsed response data");
 
-							if (responseJSON[responseDataKey])
+						if (responseJSON[responseDataKey])
+						{
+							if ((this.statusCode >= 200 && this.statusCode < 300) || this.statusCode === 301)
 							{
-								if ((this.statusCode >= 200 && this.statusCode < 300) || this.statusCode === 301)
-								{
-									debug("Completed successfully");
-									resolve(responseJSON[responseDataKey]);
-								}
-								else
-								{
-									debug("Completed with error; error response");
-									reject(responseJSON[responseDataKey]);
-								}
+								debug("Completed successfully");
+								resolve(responseJSON[responseDataKey]);
 							}
 							else
 							{
-								debug("Completed with error; invalid responseDataKey", _.keys(responseJSON));
-								reject({ error: "Response does not contain object '" + responseDataKey + "'" });
+								debug("Completed with error; error response");
+								reject(responseJSON[responseDataKey]);
 							}
 						}
-						catch (e)
+						else
 						{
-							reject(e);
+							debug("Completed with error; invalid responseDataKey", _.keys(responseJSON));
+							reject({ error: "Response does not contain object '" + responseDataKey + "'" });
 						}
-						
 					}
-					else
+					catch (e)
 					{
-						reject("Invalid response\n" + responseData);
+						reject(e);
 					}
-
-				});
-
-				response.on('abort', function() {
-					debug("Request aborted");
-					reject("Aborted");
-				});
-			});
-
-			req.on('error', function(response) {
-				reject(response);
-			});
-
-			req.end();
-		});
-
-		return rp;
-	},
-
-	// Handle multiple requests. Promise resolves unless all requests fail.
-	requestAll: function(requests) {
-		var promise = new Promise();
-		var outstanding = requests.length;
-
-		var succeeded = [];
-		var failed = [];
-
-		var checkComplete = function() {
-			--outstanding;
-			if (0 === outstanding)
-			{
-				if (!_.isEmpty(succeeded))
-				{
-					promise.resolve(succeeded, failed);
 				}
 				else
 				{
-					promise.reject(succeeded, failed);
+					reject("Invalid response\n" + responseData);
 				}
-			}
-		}
+			});
 
-		_.each(requests, function(req) {
-			req
-			.done(function() {
-				succeeded.push(req);
-				checkComplete();
-			})
-			.fail(function() {
-				failed.push(req);
-				checkComplete();
+			response.on('abort', function() {
+				debug("Request aborted");
+				reject("Aborted");
 			});
 		});
 
-		return promise;
+		req.on('error', function(response) {
+			reject(response);
+		});
+
+		req.end();
+	});
+}
+
+module.exports = class Requestor {
+	constructor(host)
+	{
+		this.queue = [];
+		this.processing = [];
+		this.host = host;
 	}
-};
+
+	request(path, data, responseDataKey)
+	{
+		var req = new Promise((resolve, reject) => {
+			this._queue({
+				method: 'GET',
+				host: this.host,
+				path: '/' + path + '?' + query.stringify(data),
+				// data: query.stringify(data)
+			}, responseDataKey, resolve, reject);
+		});
+
+		this._dequeue();
+
+		return req;
+	}
+
+	_queue(options, responseDataKey, success, fail)
+	{
+		this.queue.push(function() {
+			return request(options, responseDataKey).then(success, fail);
+		});
+		debug("request queued", this.queue.length);
+	}
+
+	_dequeue()
+	{
+		if (!_.isEmpty(this.queue) && this.processing.length < 1)
+		{
+			debug("dequeue", this.queue.length);
+
+			var func = this.queue.pop();
+
+			var promise = func();
+
+			promise.then((value) => {
+				this.processing.splice(this.processing.indexOf(promise), 20);
+				this._dequeue();
+				return value;
+			}).catch((err) => function() {
+				console.error("Queued request failed", err);
+			});
+
+			this.processing.push(promise);
+
+			this._dequeue();
+		}
+	}
+}
