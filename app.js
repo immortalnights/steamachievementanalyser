@@ -55,22 +55,20 @@ else
 				// Fetch game schema and global achievement percentages for all games the user has
 				var requiredGames = [];
 
-				_.each(user.data, function(game, key) {
+				_.each(user.data, function(userGame, key) {
 					if (!_.has(games.data, key))
 					{
 						// add the game to the game data as the game name is more reliable from the user data
 						games.data[key] = {
-							gameName: game.name
+							gameName: userGame.name
 						};
 
 						requiredGames.push({
 							appid: key
 						});
 					}
-					else if (_.isUndefined(games.data[key].achievements))
+					else if (userGame.playtime_forever !== 0 && userGame.achievements && _.isUndefined(games.data[key].achievements))
 					{
-						console.log("need", key, games.data[key]);
-						process.exit();
 						requiredGames.push({
 							appid: key
 						});
