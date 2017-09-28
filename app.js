@@ -44,7 +44,7 @@ else
 	let user = new Player(options.user);
 
 	Promise.all([games.load(), user.load()])
-	.then(function(results, b) {
+	.then(function(results) {
 		let games = results[0];
 		let user = results[1];
 
@@ -53,7 +53,7 @@ else
 			user.update(options.key)
 			.then(function() {
 				// Fetch game schema and global achievement percentages for all games the user has
-				var requiredGames = [];
+				let requiredGames = [];
 
 				_.each(user.data, function(userGame, key) {
 					if (!_.has(games.data, key))
@@ -95,24 +95,52 @@ else
 		else
 		{
 			_.defer(function() {
-				var analyzer = new Analyzer(user, games);
+				let analyzer = new Analyzer(user, games);
+
+				let statistics = analyzer.calculate();
+
 				// Display the user summary
 				console.log("Statistics:");
-				_.each(analyzer.statistics, function(value, key) {
+				_.each(_.omit(statistics, 'mostPlayedGame', 'recentGames'), function(value, key) {
 					console.log(value, key);
+				});
+				console.log("");
+				console.log("Most Played Games:");
+				let mostPlayed = statistics.mostPlayedGame;
+				console.log(" - %s %ih", mostPlayed.gameName, mostPlayed.playtime_forever);
+				console.log("");
+				console.log("Recent Games:");
+				statistics.recentGames = _.sortBy(statistics.recentGames, 'playtime_forever');
+				_.each(statistics.recentGames, function(game) {
+					let playtime = game.playtime_forever;
+					if (playtime > 1500)
+					{
+						playtime = Math.round(playtime / 60 / 24) + 'd';
+					}
+					else if (playtime > 300)
+					{
+						playtime = Math.round(playtime / 60) + 'h';
+					}
+					else
+					{
+						playtime = playtime + 'm';
+					}
+
+					console.log(" - %s (%s) %s", game.gameName, game.appid, playtime);
 				});
 				console.log("");
 				// Display the ten easiest games
 				console.log("Easiest Games:");
-				var easiestGames = analyzer.getEasiestGames();
+				let easiestGames = analyzer.getEasiestGames();
+				easiestGames = _.sortBy(easiestGames, 'globalCompletionPercentage').reverse();
 				_.each(easiestGames, function(item) {
 					console.log(" - %s (%i): %s%%", item.name, item.id, item.globalCompletionPercentage.toFixed(2));
 				});
 				console.log("");
 				// Display the ten easiest achievements
 				console.log("Easiest Achievements:");
-				var easiestAchievements = analyzer.getEasiestAchievements(false);
-				// console.log(easiestAchievements);
+				let easiestAchievements = analyzer.getEasiestAchievements(false);
+				easiestAchievements = _.sortBy(easiestAchievements, function(group) { return group[0].gameName; });
 				_.each(easiestAchievements, function(group, key) {
 					console.log(" - %s (%i)", group[0].gameName, group[0].id);
 					_.each(group, function(item) {

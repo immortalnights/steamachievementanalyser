@@ -1,3 +1,5 @@
 node_modules
 games.json
 user-*.json
+update.bat
+analyze.bat
