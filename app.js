@@ -129,6 +129,12 @@ else
 					console.log(" - %s (%s) %s", game.gameName, game.appid, playtime);
 				});
 				console.log("");
+				console.log("Highest Completion Percentage:");
+				// Display the ten games with the least achievements remaining
+				_.each(analyzer.getHighestCompletionPercentage(), function(game) {
+					console.log(" - %s (%i) %i%", game.gameName, game.appid, 100-Math.floor(game.percentage * 100));
+				});
+				console.log("");
 				// Display the ten easiest games
 				console.log("Easiest Games:");
 				let easiestGames = analyzer.getEasiestGames();
