@@ -134,13 +134,13 @@ else
 				console.log("Highest Completion Percentage:");
 				// Display the ten games with the least achievements remaining
 				_.each(analyzer.getHighestCompletionPercentage(), function(game) {
-					console.log(" - %s (%i) %i%", game.gameName, game.appid, game.percentage);
+					console.log(" - %s (%i) %s%", game.gameName, game.appid, game.percentage.toFixed(2));
 				});
 				console.log("");
 				console.log("Lowest Completion Percentage:");
 				// Display the ten games with the least achievements remaining
 				_.each(analyzer.getLowestCompletionPercentage(), function(game) {
-					console.log(" - %s (%i) %i%", game.gameName, game.appid, game.percentage);
+					console.log(" - %s (%i) %s%", game.gameName, game.appid, game.percentage.toFixed(2));
 				});
 				console.log("");
 				// Display the ten easiest games
