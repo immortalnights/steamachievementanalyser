@@ -101,38 +101,46 @@ else
 
 				// Display the user summary
 				console.log("Statistics:");
-				_.each(_.omit(statistics, 'mostPlayedGame', 'recentGames'), function(value, key) {
-					console.log(value, key);
-				});
-				console.log("");
-				console.log("Most Played Games:");
-				let mostPlayed = statistics.mostPlayedGame;
-				console.log(" - %s %ih", mostPlayed.gameName, mostPlayed.playtime_forever);
-				console.log("");
-				console.log("Recent Games:");
-				statistics.recentGames = _.sortBy(statistics.recentGames, 'playtime_forever');
-				_.each(statistics.recentGames, function(game) {
-					let playtime = game.playtime_forever;
-					if (playtime > 1500)
-					{
-						playtime = Math.round(playtime / 60 / 24) + 'd';
-					}
-					else if (playtime > 300)
-					{
-						playtime = Math.round(playtime / 60) + 'h';
-					}
-					else
-					{
-						playtime = playtime + 'm';
-					}
+				console.log("Total Games:           %i (%s%% unplayed)", statistics.totalGames, ((statistics.unplayedGames / statistics.totalGames) * 100).toFixed(2));
+				console.log("Perfected:             %i (%s%%)", statistics.perfectGames, ((statistics.perfectGames / statistics.totalGames) * 100).toFixed(2));
+				console.log("Achievements:          %s%%", ((statistics.totalAchievedAchievements / statistics.totalAvailableAchievements) * 100).toFixed(2))
+				console.log("Completion Percentage: %s%%", statistics.completionPercentage);
 
-					console.log(" - %s (%s) %s", game.gameName, game.appid, playtime);
-				});
 				console.log("");
+				// console.log("Most Played Games:");
+				// let mostPlayed = statistics.mostPlayedGame;
+				// console.log(" - %s %ih", mostPlayed.gameName, mostPlayed.playtime_forever);
+				// console.log("");
+				// console.log("Recent Games:");
+				// statistics.recentGames = _.sortBy(statistics.recentGames, 'playtime_forever');
+				// _.each(statistics.recentGames, function(game) {
+				// 	let playtime = game.playtime_forever;
+				// 	if (playtime > 1500)
+				// 	{
+				// 		playtime = Math.round(playtime / 60 / 24) + 'd';
+				// 	}
+				// 	else if (playtime > 300)
+				// 	{
+				// 		playtime = Math.round(playtime / 60) + 'h';
+				// 	}
+				// 	else
+				// 	{
+				// 		playtime = playtime + 'm';
+				// 	}
+
+				// 	console.log(" - %s (%s) %s", game.gameName, game.appid, playtime);
+				// });
+				// console.log("");
 				console.log("Highest Completion Percentage:");
 				// Display the ten games with the least achievements remaining
 				_.each(analyzer.getHighestCompletionPercentage(), function(game) {
-					console.log(" - %s (%i) %i%", game.gameName, game.appid, 100-Math.floor(game.percentage * 100));
+					console.log(" - %s (%i) %i%", game.gameName, game.appid, game.percentage);
+				});
+				console.log("");
+				console.log("Lowest Completion Percentage:");
+				// Display the ten games with the least achievements remaining
+				_.each(analyzer.getLowestCompletionPercentage(), function(game) {
+					console.log(" - %s (%i) %i%", game.gameName, game.appid, game.percentage);
 				});
 				console.log("");
 				// Display the ten easiest games
