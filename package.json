@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Analyses user Steam achievements.",
   "repository": "https://github.com/immortalnights/steamachievementanalyser",
+  "license": "MIT",
   "dependencies": {
     "command-line-args": "^4.0.7",
-    "command-line-usage": "^4.0.1",
-    "debug": "^2.6.8",
-    "moment": "^2.18.1",
+    "command-line-usage": "^4.1.0",
+    "debug": "^2.6.9",
+    "moment": "^2.22.1",
     "progress": "^0.1.0",
-    "underscore": "^1.8.3"
+    "underscore": "^1.9.0"
   }
 }
